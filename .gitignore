@@ -1,0 +1,8 @@
+__pycache__
+report/*
+backup/*
+.git
+.idea
+total.xlsx
+test.xlsx
+test2.xlsx
