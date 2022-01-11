@@ -1,6 +1,8 @@
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, date
+
+import openpyxl
 import pandas
 import query as qw
 
@@ -19,11 +21,11 @@ def fill_append(fill: list, i, j, num, val):
     fill.append(j)
     fill.append(num)
     fill.append(val) if num != 3 else fill.append(val * 100)
-    fill.append(to_stamp_time(datetime.now().strftime("%d.%m.%Y")))
+    fill.append(to_stamp_time(date(year=2021, month=12, day=21).strftime("%d.%m.%Y")))
 
 
 class Meters:
-    def __init__(self):
+    def __init__(self, db_name, path, db_create=False):
         self.drop_devices = "DROP TABLE IF EXISTS devices;"
         self.drop_meters = "DROP TABLE IF EXISTS meters;"
         self.drop_filial = "DROP TABLE IF EXISTS filial;"
@@ -36,11 +38,17 @@ class Meters:
 
         self.select_all = f"SELECT filial_id, device_id, parameter_id, value, date " \
                           f"FROM meters " \
-                          f"WHERE parameter_id != 3 AND date={to_stamp_time(datetime.now().strftime('%d.%m.%Y'))}"
+                          f"WHERE parameter_id != 3 AND date={to_stamp_time(date(year=2021, month=12, day=21).strftime('%d.%m.%Y'))}"
 
-        self.db_name = None
-        self.conn = None
-        self.cur = None
+        self.db_name = db_name
+        self.conn = sqlite3.connect(self.db_name)
+        self.cur = self.conn.cursor()
+
+        if db_create:
+            self.db_create()
+
+        self.path = path
+        self.files = os.listdir(self.path)
 
     def set_db_name(self, db_name):
         self.db_name = db_name
@@ -70,16 +78,15 @@ class Meters:
             print('No database name.. Create database!')
         return
 
-    def parse_excel(self, path: str, insert=False):
+    def parse_excel(self, insert=False):
 
-        files = os.listdir(path)
         tmp_list = {}
         fill, total = [], []
-        files = [i for i in files]
+        list_file = [i for i in self.files]
         _skip = 47
         for k in range(11):
             _excel = pandas.read_excel(
-                f'{path}/{files[k]}',
+                f'{self.path}/{list_file[k]}',
                 engine='openpyxl',
                 sheet_name='Разбивка по филиалам',
                 header=None,
@@ -102,8 +109,8 @@ class Meters:
                     total.append(tuple(fill))
                 start += 3
                 end += 3
-        print(f'{len(files)} files in path "{path}" parse successfully!')
-        print(f'Find files {files}')
+        print(f'{len(list_file)} files in path "{self.path}" parse successfully!')
+        print(f'Find files {list_file}')
 
         if insert:
             if self.db_name is not None:
@@ -117,20 +124,20 @@ class Meters:
     def all(self):
         if self.db_name is not None:
             self.cur.execute(self.select_all)
-            # self.conn.commit()
             answer = self.cur.fetchall()
+            _esk_total = openpyxl.load_workbook('total.xlsx', read_only=False, keep_vba=True)
+            _sheet_name = _esk_total['Разбивка по филиалам']
+
+            # Сделать запись в итоговую таблицу
+
+            # _sheet_name['B2'] = 'write something'
+            # _sheet_name.cell(row=1, column=1).value = "Записал"
+            #
+            # _esk_total.save('test.xlsx')
         else:
             print("No database name..Create database!")
             return
         return answer
-
-
-
-
-
-
-
-
 
     def sql_qw(self, device=None, parameter=None, filial_firstname=None, filial_lastname=None, date=None):
 

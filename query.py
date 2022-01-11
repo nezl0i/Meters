@@ -78,6 +78,5 @@ excel_column = {
          'R12', 'S12', 'U12', 'V12', 'X12', 'Y12', 'AA12', 'AB12', 'AD12', 'AE12'],
 }
 
-for key, value in excel_column.items():
-    for i in value:
-        print(i)
+# for i in range(1, 13):
+#     print(*excel_column[i])
